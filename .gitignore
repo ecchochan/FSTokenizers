@@ -1,0 +1,9 @@
+*.html
+*.c
+*.cpp
+*.h
+*.so
+*.html
+test*
+build/*
+fstokenizers/*
