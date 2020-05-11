@@ -630,7 +630,8 @@ class BaseTokenizer(object):
                 str add_Q = 'Question: ',
                 bint is_training = False,
                 bint no_sliding = False,
-                bint debug = False):
+                bint debug = False,
+                bint squad2_only=False):
     '''
         Representation: 
         <s> <context> </s> Question: <question> yes / no / ...options / (both) </s>
@@ -664,70 +665,80 @@ class BaseTokenizer(object):
         answer_choice = q['answer_choice'] if 'answer_choice' in q else None
         answer_text   = (q['answer_text'].strip() or None) if 'answer_text' in q else None
         question_text = add_Q + q['question'].strip()
-        if question_text and not question_text[len(question_text)-1] in PUNCTUATIONS:
-            question_text += ' /'
 
-        qlen = len(question_text)
+        if answer_text is None and answer_pos is None and 'answers' in q:
+            if not ('is_impossible' in q and q['is_impossible']):
+                answer_text = q['answers'][0]['text']
+                answer_pos = q['answers'][0]['answer_start']
+
+
+        if not squad2_only:
+            if question_text and not question_text[len(question_text)-1] in PUNCTUATIONS:
+                question_text += ' /'
+
+            qlen = len(question_text)
+                
+            #question_text += ' yes / no / depends'
+            question_text += ' yes / no'
+
+            is_yes = answer_text == 'yes'
+            is_no  = answer_text == 'no'
+            #is_depends = answer_text == 'depends'
+
+            if is_yes or is_no or answer_text is None: 
+                answer_pos = None
             
-        #question_text += ' yes / no / depends'
-        question_text += ' yes / no'
-
-        is_yes = answer_text == 'yes'
-        is_no  = answer_text == 'no'
-        #is_depends = answer_text == 'depends'
-
-        if is_yes or is_no or answer_text is None: 
-            answer_pos = None
-        
-        qid           = q['id'] if 'id' in q else None
-
+        qid = q['id'] if 'id' in q else None
 
         query_char_anchors = []
 
-        ans_in_choice = is_yes or is_no
+        if not squad2_only:
+            ans_in_choice = is_yes or is_no
 
-        for c in choices:
-            if c in DEFAULT_CHOICES:
-                continue
-            r = re.search(r'\b%s\b'%re.escape(c), question_text)
-            if r is not None:
-                if answer_text == c:
-                    ans_in_choice = True
-                    a, b = r.span()
-                    query_char_anchors = [a, b-1]
-                    answer_pos = None
-            else:
-                if answer_text == c:
+            for c in choices:
+                if c in DEFAULT_CHOICES:
+                    continue
+                r = re.search(r'\b%s\b'%re.escape(c), question_text)
+                if r is not None:
+                    if answer_text == c:
+                        ans_in_choice = True
+                        a, b = r.span()
+                        query_char_anchors = [a, b-1]
+                        answer_pos = None
+                else:
+                    if answer_text == c:
+                        ans_in_choice = True
+                        a = len(question_text) + 3
+                        b = a + len(c)
+                        query_char_anchors = [a, b-1]
+                        answer_pos = None
+                    question_text += ' / '+ c
+                    extra_options += 1
+
+            if extra_options == 2 and 'both' not in choices:
+                if answer_text == 'both':
                     ans_in_choice = True
                     a = len(question_text) + 3
-                    b = a + len(c)
+                    b = a + 4
                     query_char_anchors = [a, b-1]
                     answer_pos = None
-                question_text += ' / '+ c
-                extra_options += 1
-
-        if extra_options == 2 and 'both' not in choices:
-            if answer_text == 'both':
-                ans_in_choice = True
-                a = len(question_text) + 3
-                b = a + 4
-                query_char_anchors = [a, b-1]
-                answer_pos = None
-            question_text += ' / both'
+                question_text += ' / both'
 
 
         query         = createTokens(question_text)
         query.char_anchors = query_char_anchors
         
-        if is_yes:
-            i = qlen + 1
-            query.char_anchors = [i, i+2]
-        elif is_no:
-            i = qlen + 7
-            query.char_anchors = [i, i+1]
-        #elif is_depends:
-        #    i = qlen + 12
-        #    query.char_anchors = [i, i+6]
+
+        if not squad2_only:
+            if is_yes:
+                i = qlen + 1
+                query.char_anchors = [i, i+2]
+            elif is_no:
+                i = qlen + 7
+                query.char_anchors = [i, i+1]
+            #elif is_depends:
+            #    i = qlen + 12
+            #    query.char_anchors = [i, i+6]
 
 
         this_context  = createTokens('').extend(context)
@@ -748,8 +759,6 @@ class BaseTokenizer(object):
                 continue
             query = query[0:max_query_length]
             query_length  = max_query_length
-
-            
 
         total_length = 1 + context_length + 1 + query_length + 1
 
