@@ -716,7 +716,7 @@ class BaseTokenizer(object):
             question_text += ' / both'
 
 
-        query         = createTokens(question_text,max_context=0)
+        query         = createTokens(question_text)
         query.char_anchors = query_char_anchors
         
         if is_yes:
