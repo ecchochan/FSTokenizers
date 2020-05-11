@@ -613,7 +613,7 @@ class BaseTokenizer(object):
                .extend(bos)
                .extend(context,1)
                .extend(eos)
-               .extend(query,2,MASKED, NOT_IS_MAX_CONTEXT)
+               .extend(query,2)
                .extend(eos))
     return ret
 
