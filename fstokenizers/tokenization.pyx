@@ -666,7 +666,7 @@ class BaseTokenizer(object):
         answer_text   = (q['answer_text'].strip() or None) if 'answer_text' in q else None
         question_text = add_Q + q['question'].strip()
 
-        if answer_text is None and answer_pos is None and 'answers' in q:
+        if answer_text is None and answer_pos is None and 'answers' in q and q['answers']:
             if not ('is_impossible' in q and q['is_impossible']):
                 answer_text = q['answers'][0]['text']
                 answer_pos = q['answers'][0]['answer_start']
@@ -793,7 +793,7 @@ class BaseTokenizer(object):
             #for j in range(strides):
             j = 0
             while True:
-                _max_seq_length = max_seq_length + randint(-max_seq_length_var, 0)
+                _max_seq_length = max_seq_length + (randint(-max_seq_length_var, 0) if max_seq_length_var > 0 else 0)
                 remaining_space  = _max_seq_length - fixed
 
                 if False and j == last_stride_j:
