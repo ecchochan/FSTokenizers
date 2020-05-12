@@ -666,8 +666,8 @@ class BaseTokenizer(object):
         answer_text   = (q['answer_text'].strip() or None) if 'answer_text' in q else None
         question_text = add_Q + q['question'].strip()
 
-        if answer_text is None and answer_pos is None and 'answers' in q and q['answers']:
-            if not ('is_impossible' in q and q['is_impossible']):
+        if answer_text is None and answer_pos is None and 'answers' in q and len(q['answers']) > 0:
+            if not ('is_impossible' in q and q['is_impossible']) and not ('no_answer' in q and q['no_answer']):
                 answer_text = q['answers'][0]['text']
                 answer_pos = q['answers'][0]['answer_start']
 
