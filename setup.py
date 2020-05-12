@@ -15,7 +15,7 @@ except ImportError:
 
 setup(
     name='fstokenizers',
-    version='0.0.4',
+    version='0.0.5',
     packages=find_packages(),
     description='Fairseq Tokenizers with SentencePiece',
     ext_modules=ext_modules

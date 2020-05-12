@@ -617,14 +617,30 @@ class BaseTokenizer(object):
                .extend(eos))
     return ret
 
+  def merge_context2(self,
+                    context, 
+                    query, 
+                    ):
+    cdef int k, j
+    bos = self.BOS
+    eos = self.EOS
+    ret = (self.createTokens('')
+               .extend(bos)
+               .extend(query,1)
+               .extend(eos)
+               .extend(context,2)
+               .extend(eos))
+    return ret
+
   def merge_cq( self, 
                 context, 
                 qas,
                 int max_seq_length,
-                int max_seq_length_var = 10,
+                int max_seq_length_var = 0,
                 int max_query_length = 368,
                 int doc_stride = 128,
                 int max_sliding_negative = 1,
+                int merge_style = 0,
                 unique_index = None,
                 context_id=None,
                 str add_Q = 'Question: ',
@@ -634,15 +650,21 @@ class BaseTokenizer(object):
                 bint squad2_only=False):
     '''
         Representation: 
+
+
         <s> <context> </s> Question: <question> yes / no / ...options / (both) </s>
 
+        <s> Question: <question> yes / no / ...options / (both) </s> <context> </s> 
     '''
     
     cdef int i = 0, j = 0, k = 0, a, b, ans_in_choice, extra_options, qlen, fixed, remaining, total_length, query_length, char_s, char_e, last_stride_j, e_s, _max_seq_length
     cdef int_pairs context_spans
     cdef int_pair p
     cdef list char_anchors
-    merge_method = self.merge_context
+    if merge_style == 2:
+        merge_method = self.merge_context2
+    else:
+        merge_method = self.merge_context
         
     createTokens = self.createTokens
         
@@ -665,6 +687,9 @@ class BaseTokenizer(object):
         answer_choice = q['answer_choice'] if 'answer_choice' in q else None
         answer_text   = (q['answer_text'].strip() or None) if 'answer_text' in q else None
         question_text = add_Q + q['question'].strip()
+
+        if answer_text is None:
+            answer_pos = None
 
         if answer_text is None and answer_pos is None and 'answers' in q and len(q['answers']) > 0:
             if not ('is_impossible' in q and q['is_impossible']) and not ('no_answer' in q and q['no_answer']):
